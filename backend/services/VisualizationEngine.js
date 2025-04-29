@@ -1,4 +1,4 @@
-import { ChartJSNodeCanvas } from "chartjs-node-canvas";
+ import { ChartJSNodeCanvas } from "chartjs-node-canvas";
 
 /**
  * Generates a visualization from the query result.

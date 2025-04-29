@@ -15,7 +15,7 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import MicOffIcon from '@mui/icons-material/MicOff';
-import BarChartIcon from '@mui/icons-material/BarChart';
+
 import DialogActions from '@mui/material/DialogActions';
 import MicIcon from '@mui/icons-material/Mic';
 import {ButtonBase} from '@mui/material';
@@ -43,8 +43,6 @@ import SearchIcon from '@mui/icons-material/Search';
 import InputBase from '@mui/material/InputBase';
 import CircularProgress from '@mui/material/CircularProgress';
 import Button from '@mui/material/Button';
-import Menu from '@mui/material/Menu';
-import MenuItem from '@mui/material/MenuItem';
 import Popover from '@mui/material/Popover';
 import FormGroup from '@mui/material/FormGroup';
 import { alpha } from '@mui/material/styles';
@@ -53,10 +51,6 @@ import Navbar from '../components/Navbar';
 import { useLocation } from 'react-router-dom';
 import EmailDataModal from '../components/EmailDataModal';
 import ScheduleEmailModal from '../components/ScheduleEmail';
-
-function createData(id, name, calories, fat, carbs, protein) {
-  return { id, name, calories, fat, carbs, protein };
-}
 
 function descendingComparator(a, b, orderBy) {
   if (b[orderBy] < a[orderBy]) {
