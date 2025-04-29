@@ -1653,4 +1653,4 @@ const AIInsightsPanel = ({ data, graphType, darkMode }) => {
     </div>
   );
 };
-export default Graphrender;
+export  default Graphrender;
