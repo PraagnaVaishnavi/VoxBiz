@@ -1,12 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import ReactMarkdown from "react-markdown";
+import { Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 
 const BusinessChatBox = ({ onClose }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const messagesEndRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const speechSynthesisRef = useRef(window.speechSynthesis);
 
   const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
@@ -31,6 +36,81 @@ Respond strictly within business analysis, management, growth, and operational s
     scrollToBottom();
   }, [messages]);
 
+  // Initialize speech recognition
+  useEffect(() => {
+    if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
+      
+      recognitionRef.current.onresult = (event) => {
+        const transcript = Array.from(event.results)
+          .map(result => result[0])
+          .map(result => result.transcript)
+          .join('');
+        
+        setInput(transcript);
+      };
+      
+      recognitionRef.current.onerror = (event) => {
+        console.error('Speech recognition error', event.error);
+        setIsListening(false);
+      };
+    }
+    
+    // Clean up speech recognition on component unmount
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      if (speechSynthesisRef.current && speechSynthesisRef.current.speaking) {
+        speechSynthesisRef.current.cancel();
+      }
+    };
+  }, []);
+
+  const toggleListening = () => {
+    if (!recognitionRef.current) {
+      alert("Speech recognition is not supported in your browser.");
+      return;
+    }
+    
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      recognitionRef.current.start();
+      setIsListening(true);
+    }
+  };
+
+  const speakText = (text) => {
+    if (!speechSynthesisRef.current) {
+      alert("Speech synthesis is not supported in your browser.");
+      return;
+    }
+    
+    // Cancel any ongoing speech
+    if (speechSynthesisRef.current.speaking) {
+      speechSynthesisRef.current.cancel();
+    }
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    
+    setIsSpeaking(true);
+    speechSynthesisRef.current.speak(utterance);
+  };
+
+  const stopSpeaking = () => {
+    if (speechSynthesisRef.current && speechSynthesisRef.current.speaking) {
+      speechSynthesisRef.current.cancel();
+      setIsSpeaking(false);
+    }
+  };
+
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
 
@@ -39,6 +119,11 @@ Respond strictly within business analysis, management, growth, and operational s
     setMessages(newMessages);
     setInput("");
     setLoading(true);
+
+    // Stop listening when sending a message
+    if (isListening) {
+      toggleListening();
+    }
 
     try {
       const response = await axios.post(
@@ -57,12 +142,18 @@ Respond strictly within business analysis, management, growth, and operational s
         response?.data?.candidates?.[0]?.content?.parts?.[0]?.text || "⚠ No response received.";
 
       setMessages([...newMessages, { role: "assistant", content: botResponse }]);
+      
+      // Automatically speak the response
+      speakText(botResponse.replace(/[#*_]/g, ''));
     } catch (error) {
       console.error("Gemini error:", error);
+      const errorMessage = "⚠ Failed to fetch response. Please check your API key or try again later.";
       setMessages([...newMessages, {
         role: "assistant",
-        content: "⚠ Failed to fetch response. Please check your API key or try again later."
+        content: errorMessage
       }]);
+      
+      speakText(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -76,7 +167,7 @@ Respond strictly within business analysis, management, growth, and operational s
   };
 
   return (
-    <div className="fixed top-1/2 transform -translate-y-1/2 w-[500px] bg-white shadow-lg border rounded-lg">
+    <div className="fixed top-1/3 mt-3 transform -translate-y-1/2 w-[500px] bg-white shadow-lg border rounded-lg z-50">
       <div className="p-4 bg-[#002244] text-white flex justify-between rounded-t-lg">
         <span className="font-bold">Business Strategy Assistant</span>
         <button
@@ -105,6 +196,17 @@ Respond strictly within business analysis, management, growth, and operational s
             <div className="whitespace-pre-wrap break-words">
               <ReactMarkdown>{msg.content}</ReactMarkdown>
             </div>
+            {msg.role === "assistant" && (
+              <div className="flex justify-end mt-1">
+                <button 
+                  onClick={() => isSpeaking ? stopSpeaking() : speakText(msg.content.replace(/[#*_]/g, ''))}
+                  className="text-xs p-1 rounded hover:bg-gray-400"
+                  title={isSpeaking ? "Stop speaking" : "Read aloud"}
+                >
+                  {isSpeaking ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                </button>
+              </div>
+            )}
           </div>
         ))}
         {loading && (
@@ -117,15 +219,24 @@ Respond strictly within business analysis, management, growth, and operational s
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-2 flex">
+      <div className="p-2 flex items-center">
+        <button
+          onClick={toggleListening}
+          className={`p-2 rounded-lg mr-2 ${
+            isListening ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-700'
+          }`}
+          title={isListening ? "Stop listening" : "Start voice input"}
+        >
+          {isListening ? <MicOff size={20} /> : <Mic size={20} />}
+        </button>
         <input
           type="text"
-          className="flex-1 p-2 border rounded-lg text-black"
+          className="flex-1 p-2 border rounded-lg"
           placeholder="Ask me about strategy, KPIs, market insights..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyPress={handleKeyPress}
-          disabled={false}
+          disabled={loading}
         />
         <button
           onClick={sendMessage}
@@ -139,4 +250,4 @@ Respond strictly within business analysis, management, growth, and operational s
   );
 };
 
-export default BusinessChatBox; 
+export default BusinessChatBox;
