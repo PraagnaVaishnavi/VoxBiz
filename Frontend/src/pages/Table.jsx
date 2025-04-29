@@ -799,9 +799,6 @@ useEffect(() => {
     setDense(event.target.checked);
   };
 
-  const handleBackClick = () => {
-    navigate('/visChoice');
-  };
 // State variables
 const [notExpectedDialogOpen, setNotExpectedDialogOpen] = useState(false);
 const [refinementFeedback, setRefinementFeedback] = useState('');
@@ -809,10 +806,6 @@ const [currentQuery, setCurrentQuery] = useState('');
 const [sidebarOpen, setSidebarOpen] = useState(false); // Default to closed
 const [voiceCommandActive, setVoiceCommandActive] = useState(false);
 const [transcribedCommand, setTranscribedCommand] = useState('');
-const [isListening, setIsListening] = useState(false);
-const [transcript, setTranscript] = useState('');
-const [message, setMessage] = useState('Click the microphone to start speaking');
-const recognitionRef = useRef(null);
 
 // Toggle voice recognition on/off
 const toggleVoiceCommand = () => {
@@ -1059,25 +1052,6 @@ const handleRefinementSubmit = async () => {
     setLoading(false);
   }
 };
-
-const navigateToGraphView = () => {
-  navigate("/rendergraph", { state: { visualizationData: data } });
-};
-
-  const isSelected = (id) => selected.indexOf(id) !== -1;
-
-  // Avoid a layout jump when reaching the last page with empty rows
-  const emptyRows =
-    page > 0 ? Math.max(0, (1 + page) * rowsPerPage - filteredRows.length) : 0;
-
-  const visibleRows = React.useMemo(
-    () =>
-      filteredRows
-        .slice()
-        .sort(getComparator(order, orderBy))
-        .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
-    [order, orderBy, page, rowsPerPage, filteredRows],
-  );
 
   return ( 
     <Box 
